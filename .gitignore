@@ -111,3 +111,4 @@ venv.bak/
 
 backscatter_data
 *.png
+*.tiff
