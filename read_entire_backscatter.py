@@ -45,6 +45,10 @@ for k in RANGES:
     hi = float(RANGES[k][1])
     SETTINGS[k] = {'lo': lo, 'hi': hi}
 
+SETTINGS['d']['exp'] = 1.0
+SETTINGS['s']['exp'] = 0.1 # higher resolution aaround low values
+SETTINGS['a']['exp'] = 0.2 # higher resolution aaround low values
+SETTINGS['u']['exp'] = 2.0 # higher resolution aaround high values
 
 def xstr2col(x):
     return int(float(x)*10) - XMIN
@@ -66,17 +70,40 @@ def raw2cmyk(settings, x):
 def raws2cmyk(d, s, a, u):
     # Different orders give different looking images
     return (
-        raw2cmyk(SETTINGS['a'], a),
         raw2cmyk(SETTINGS['d'], d),
         raw2cmyk(SETTINGS['s'], s),
+        raw2cmyk(SETTINGS['a'], a),
         raw2cmyk(SETTINGS['u'], u)
     )
 
 def cat2cmyk(c):
     return CLASS_CMYK[c]
 
+def raw2purple(name, x):
+    lo = SETTINGS[name]['lo']
+    hi = SETTINGS[name]['hi']
+    width = hi - lo
+    red = None
+    if x == np.inf:
+        red = np.uint8(255)
+    elif width < 0.0001:
+        red = np.uint8(0)
+    else:
+        #red = np.uint8(((x-lo)/width) * 255)
+        norm = (x-lo) / width
+        norm = norm ** SETTINGS[name]['exp']
+        red = np.uint8(norm * 255)
+    return (red, np.uint8(0), np.uint8(255))
+
+
+
+
 feats = np.zeros((H,W,4), dtype=np.uint8)
-#cats = np.zeros((H,W,4), dtype=np.uint8)
+cats = np.zeros((H,W,4), dtype=np.uint8)
+ds = np.zeros((H,W,3), dtype=np.uint8)
+ss = np.zeros((H,W,3), dtype=np.uint8)
+acs = np.zeros((H,W,3), dtype=np.uint8)
+us = np.zeros((H,W,3), dtype=np.uint8)
 
 
 reader = csv.reader(open(FILE, 'r'))
@@ -88,12 +115,24 @@ for line in reader:
     s = float(line[3].strip())
     a = float(line[4].strip())
     u = float(line[6].strip())
-    #c = int(float(line[7].strip()))
+    c = int(float(line[7].strip()))
 
     feats[i,j] = raws2cmyk(d, s, a, u)
-    #cats[i,j] = cat2cmyk(c)
+    cats[i,j] = cat2cmyk(c)
+    ds[i,j] = raw2purple('d', d)
+    ss[i,j] = raw2purple('s', s)
+    acs[i,j] = raw2purple('a', a)
+    us[i,j] = raw2purple('u', u)
 
 feat_img = Image.fromarray(feats, mode='CMYK')
-#cat_img = Image.fromarray(cats, mode='CMYK')
+cat_img = Image.fromarray(cats, mode='CMYK')
+ds_img = Image.fromarray(ds, mode='RGB')
+ss_img = Image.fromarray(ss, mode='RGB')
+as_img = Image.fromarray(acs, mode='RGB')
+us_img = Image.fromarray(us, mode='RGB')
 feat_img.save('feat.tiff')
-#cat_img.save('cat.tiff')
+cat_img.save('cat.tiff')
+ds_img.save('ds.tiff')
+ss_img.save('ss.tiff')
+as_img.save('as.tiff')
+us_img.save('us.tiff')
