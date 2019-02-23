@@ -108,4 +108,6 @@ venv.bak/
 *.xml
 *.zip
 *.pkl
+
 backscatter_data
+*.png
